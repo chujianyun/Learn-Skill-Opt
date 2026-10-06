@@ -65,6 +65,31 @@ class DemoTests(unittest.TestCase):
             demo.configure(replace=True)
             self.assertNotIn("manual adjustment", self.local.read_text(encoding="utf-8"))
 
+    def test_configure_uses_role_specific_models_when_set(self):
+        env = {
+            "OPENAI_COMPATIBLE_MODEL": "shared-fallback",
+            "TARGET_OPENAI_COMPATIBLE_MODEL": "target-model",
+            "OPTIMIZER_OPENAI_COMPATIBLE_MODEL": "optimizer-model",
+        }
+        with patch.dict(os.environ, env), \
+             contextlib.redirect_stdout(io.StringIO()):
+            demo.configure()
+            text = self.local.read_text(encoding="utf-8")
+            cfg = yaml.safe_load(text)
+            self.assertEqual(cfg["model"]["target"], "target-model")
+            self.assertEqual(cfg["model"]["optimizer"], "optimizer-model")
+            self.assertEqual(demo.config()["target_model"], "target-model")
+            self.assertEqual(demo.config()["optimizer_model"], "optimizer-model")
+
+    def test_configure_falls_back_to_generic_model(self):
+        with patch.dict(os.environ, {"OPENAI_COMPATIBLE_MODEL": "shared-model"}, clear=False), \
+             contextlib.redirect_stdout(io.StringIO()):
+            demo.configure()
+            text = self.local.read_text(encoding="utf-8")
+            cfg = yaml.safe_load(text)
+            self.assertEqual(cfg["model"]["target"], "shared-model")
+            self.assertEqual(cfg["model"]["optimizer"], "shared-model")
+
     def test_unconfigured_model_fails_before_provider_call(self):
         with self.assertRaisesRegex(ValueError, "configure"):
             demo.target()

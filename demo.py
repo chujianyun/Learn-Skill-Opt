@@ -28,10 +28,13 @@ def configure(replace: bool = False):
     model = os.environ.get("OPENAI_COMPATIBLE_MODEL", "").strip()
     if not model or model == "YOUR_MODEL_ID" or "替换" in model:
         raise ValueError("先填写并导出 OPENAI_COMPATIBLE_MODEL。")
+    # 分别读取角色专属模型名，未设置时回退到通用值。
+    target_model = os.environ.get("TARGET_OPENAI_COMPATIBLE_MODEL", "").strip() or model
+    optimizer_model = os.environ.get("OPTIMIZER_OPENAI_COMPATIBLE_MODEL", "").strip() or model
     # Only model names go into this generated file, never API credentials.
     content = yaml.safe_dump({
         "_base_": "product_qa.yaml",
-        "model": {"target": model, "optimizer": model},
+        "model": {"target": target_model, "optimizer": optimizer_model},
     }, allow_unicode=True, sort_keys=False)
     if LOCAL_CONFIG.exists():
         if LOCAL_CONFIG.read_text(encoding="utf-8") == content:
